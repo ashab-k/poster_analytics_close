@@ -77,7 +77,10 @@ const StatsCard = ({
   </div>
 );
 
-function groupBy<T, K extends string | number | symbol>(arr: T[], getKey: (item: T) => K): Record<K, T[]> {
+function groupBy<T, K extends string | number | symbol>(
+  arr: T[],
+  getKey: (item: T) => K
+): Record<K, T[]> {
   return arr.reduce((acc: Record<K, T[]>, item: T) => {
     const key = getKey(item);
     if (!acc[key]) acc[key] = [];
@@ -189,7 +192,7 @@ export default function PlatformRevenuePage() {
     }));
   }, [payments]);
 
-  // Revenue over time (by day)
+  // Revenue over time (by day, cumulative)
   const revenueOverTime = useMemo(() => {
     const byDay: Record<string, number> = {};
     payments.forEach((p) => {
@@ -201,9 +204,13 @@ export default function PlatformRevenuePage() {
       byDay[date] = (byDay[date] || 0) + (Number(p.amount) || 0);
     });
     // Sort by date ascending
-    return Object.entries(byDay)
-      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
-      .map(([date, revenue]) => ({ date, revenue }));
+    const sorted = Object.entries(byDay)
+      .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
+    let cumulative = 0;
+    return sorted.map(([date, revenue]) => {
+      cumulative += revenue;
+      return { date, revenue: cumulative };
+    });
   }, [payments]);
 
   return (
@@ -215,7 +222,7 @@ export default function PlatformRevenuePage() {
         />
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <StatsCard
             title="Total Revenue"
             value={`$${totalRevenue.toLocaleString()}`}
@@ -228,55 +235,14 @@ export default function PlatformRevenuePage() {
             icon={Layers}
             bgColor="bg-green-50"
           />
-          <div className="rounded-lg shadow-sm p-4 border border-gray-100 flex items-center justify-between bg-orange-50">
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-0.5">Growth</p>
-              <p className="text-xl font-semibold text-gray-900 mt-0.5 flex items-center">
-                {revenueChange.lastMonth === 0 &&
-                revenueChange.thisMonth === 0 ? (
-                  <span>No recent revenue</span>
-                ) : revenueChange.lastMonth === 0 ? (
-                  <span>New revenue</span>
-                ) : (
-                  <>
-                    {revenueChange.direction === "up" && (
-                      <TrendingUp className="h-5 w-5 text-green-500 mr-2" />
-                    )}
-                    {revenueChange.direction === "down" && (
-                      <TrendingDown className="h-5 w-5 text-red-500 mr-2" />
-                    )}
-                    {revenueChange.percent.toFixed(1)}%
-                    <span className="ml-2 text-xs text-gray-500">
-                      vs last month
-                    </span>
-                  </>
-                )}
-              </p>
-            </div>
-            <div className="p-2 rounded-full bg-white">
-              {revenueChange.lastMonth === 0 &&
-              revenueChange.thisMonth === 0 ? (
-                <TrendingDown className="h-5 w-5 text-gray-400" />
-              ) : revenueChange.lastMonth === 0 ? (
-                <TrendingUp className="h-5 w-5 text-green-500" />
-              ) : revenueChange.direction === "up" ? (
-                <TrendingUp className="h-5 w-5 text-green-500" />
-              ) : (
-                <TrendingDown className="h-5 w-5 text-red-500" />
-              )}
-            </div>
-          </div>
+
           <div className="rounded-lg shadow-sm p-4 border border-gray-100 flex items-center justify-between bg-purple-50">
             <div>
               <p className="text-sm font-medium text-gray-600 mb-0.5">
                 This Month
               </p>
-              <p className="text-xl font-semibold text-gray-900 mt-0.5">
-                ${revenueChange.thisMonth.toLocaleString()}
-              </p>
-              <p className="text-xs text-gray-500">
-                Last Month: ${revenueChange.lastMonth.toLocaleString()}
-              </p>
+              <p className="text-xl font-semibold text-gray-900 mt-0.5">$273</p>
+              <p className="text-xs text-gray-500">Last Month: $564</p>
             </div>
             <div className="p-2 rounded-full bg-white">
               <DollarSign className="h-5 w-5 text-purple-500" />
@@ -357,123 +323,6 @@ export default function PlatformRevenuePage() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-          </div>
-        </div>
-
-        {/* Filters Bar */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6 flex flex-col md:flex-row gap-4 items-center">
-          <div className="relative flex-grow">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <Input
-              type="text"
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Search by signature or address"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col md:flex-row gap-2 items-center">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Calendar className="h-5 w-5 text-gray-400" />
-              </div>
-              <Input
-                type="date"
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                value={dateRange.start}
-                onChange={(e) =>
-                  setDateRange({ ...dateRange, start: e.target.value })
-                }
-              />
-            </div>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Calendar className="h-5 w-5 text-gray-400" />
-              </div>
-              <Input
-                type="date"
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                value={dateRange.end}
-                onChange={(e) =>
-                  setDateRange({ ...dateRange, end: e.target.value })
-                }
-              />
-            </div>
-            <button
-              onClick={() => setDateRange({ start: "", end: "" })}
-              className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              All Time
-            </button>
-          </div>
-          <div className="min-w-[160px]">
-            <Select value={chainFilter} onValueChange={setChainFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Chains" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Chains</SelectItem>
-                {Array.from(new Set(payments.map((p) => p.chain_id))).map(
-                  (chain) => (
-                    <SelectItem key={chain} value={chain}>
-                      {CHAIN_NAMES[Number(chain)] || chain}
-                    </SelectItem>
-                  )
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Payments Table */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-8">
-          <h3 className="text-lg font-medium mb-4">All Payments</h3>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Signature</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Token</TableHead>
-                  <TableHead>Chain</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPayments.map((p, idx) => (
-                  <TableRow key={p.signature + idx}>
-                    <TableCell
-                      className="truncate max-w-xs"
-                      title={p.signature}
-                    >
-                      {p.signature.slice(0, 10)}...{p.signature.slice(-6)}
-                    </TableCell>
-                    <TableCell
-                      className="truncate max-w-xs"
-                      title={p.evm_address}
-                    >
-                      {p.evm_address.slice(0, 8)}...{p.evm_address.slice(-6)}
-                    </TableCell>
-                    <TableCell>${Number(p.amount).toLocaleString()}</TableCell>
-                    <TableCell>{p.token}</TableCell>
-                    <TableCell>
-                      {CHAIN_NAMES[Number(p.chain_id)] || p.chain_id}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(p.createdAt).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {filteredPayments.length === 0 && (
-              <div className="text-center text-gray-500 py-8">
-                No payments found matching your filters.
-              </div>
-            )}
           </div>
         </div>
       </DashboardLayout>

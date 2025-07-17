@@ -5,14 +5,6 @@ import { DashboardLayout } from "@/components/users/DashboardLayout";
 import { DashboardHeader } from "@/components/users/DashboardHeader";
 import { PageState } from "@/components/ui/PageState";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   PieChart,
   Pie,
   Cell,
@@ -26,15 +18,6 @@ import {
   Legend,
 } from "recharts";
 import { DollarSign, Layers } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
-import { TrendingUp, TrendingDown, Search, Calendar } from "lucide-react";
 import { CHAIN_NAMES } from "@/constants/chains";
 import { Payment } from "@/types/Payments";
 
@@ -93,13 +76,7 @@ export default function PlatformRevenuePage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Filters
-  const [searchTerm, setSearchTerm] = useState("");
-  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
-    start: "",
-    end: "",
-  });
-  const [chainFilter, setChainFilter] = useState<string>("all");
+  // Removed unused filter states
 
   useEffect(() => {
     setLoading(true);
@@ -123,64 +100,7 @@ export default function PlatformRevenuePage() {
   );
   const totalTransactions = payments.length;
 
-  // Revenue change this month vs last month
-  const revenueChange = useMemo(() => {
-    if (!payments.length)
-      return { percent: 0, direction: "none", thisMonth: 0, lastMonth: 0 };
-    const now = new Date();
-    const thisMonth = now.getMonth();
-    const thisYear = now.getFullYear();
-    const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
-    const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear;
-    let thisMonthRevenue = 0;
-    let lastMonthRevenue = 0;
-    payments.forEach((p) => {
-      const d = new Date(p.createdAt);
-      if (d.getMonth() === thisMonth && d.getFullYear() === thisYear) {
-        thisMonthRevenue += Number(p.amount) || 0;
-      } else if (
-        d.getMonth() === lastMonth &&
-        d.getFullYear() === lastMonthYear
-      ) {
-        lastMonthRevenue += Number(p.amount) || 0;
-      }
-    });
-    const percent =
-      lastMonthRevenue === 0
-        ? 100
-        : ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
-    let direction: "up" | "down" | "none" = "none";
-    if (percent > 0) direction = "up";
-    else if (percent < 0) direction = "down";
-    return {
-      percent: Math.abs(percent),
-      direction,
-      thisMonth: thisMonthRevenue,
-      lastMonth: lastMonthRevenue,
-    };
-  }, [payments]);
-
-  // Filtered payments
-  const filteredPayments = useMemo(() => {
-    return payments.filter((p) => {
-      // Search
-      const matchesSearch =
-        searchTerm === "" ||
-        p.signature.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.evm_address.toLowerCase().includes(searchTerm.toLowerCase());
-      // Date
-      let matchesDate = true;
-      if (dateRange.start) {
-        matchesDate = new Date(p.createdAt) >= new Date(dateRange.start);
-      }
-      if (matchesDate && dateRange.end) {
-        matchesDate = new Date(p.createdAt) <= new Date(dateRange.end);
-      }
-      // Chain
-      const matchesChain = chainFilter === "all" || p.chain_id === chainFilter;
-      return matchesSearch && matchesDate && matchesChain;
-    });
-  }, [payments, searchTerm, dateRange, chainFilter]);
+  // Removed unused revenueChange and filteredPayments
 
   // Revenue by chain
   const revenueByChain = useMemo(() => {
